@@ -709,9 +709,9 @@ function calculate() {
   const dcp = Math.max(0, (env.dcape/980)*(env.cape/2000)*(env.shear/40)*(env.meanWind/32));
 
   // Climatologically Calibrated Logistic Regressions
-  const x_tor = -4.5 + (0.85 * stp) + (0.003 * env.srh) + (0.02 * env.llShear) - (0.0008 * env.lcl) + (0.0003 * env.cape3) + (0.15 * (env.lapse - 6.5));
+  const x_tor = -4.5 + (0.9 * stp) + (0.0035 * env.srh) + (0.015 * env.llShear) - (0.0008 * env.lcl) + (0.0003 * env.cape3) + (0.15 * (env.lapse - 6.5));
   const x_hail = -3.8 + (0.65 * ship) + (0.0003 * env.cape) - (0.035 * env.t500) + (0.2 * (env.lapse - 6.5)) + (0.008 * env.shear);
-  const x_wind = -3.2 + (0.8 * dcp) + (0.0012 * env.dcape) + (0.025 * env.meanWind) + (0.04 * temp_spread) + (0.01 * env.shear);
+  const x_wind = -3.2 + (0.85 * dcp) + (0.0015 * env.dcape) + (0.027 * env.meanWind) + (0.03 * temp_spread) + (0.008 * env.shear);
 
   // Raw unconditional severe probabilities
   const raw_pTor = (100 / (1 + Math.exp(-x_tor)));
@@ -733,9 +733,9 @@ function calculate() {
     return 15 + 35 * (1 - Math.exp(-(val - 15) / 15)); 
   };
 
-  const rawSigTor = ((stp / 6.0) * 30) * ci_factor;
-  const rawSigHail = ((ship / 3.0) * 30) * ci_factor;
-  const rawSigWind = ((dcp / 2.0) * 30) * ci_factor;
+  const rawSigTor = ((stp / 6.25) * 30) * ci_factor;
+  const rawSigHail = ((ship / 3.5) * 30) * ci_factor;
+  const rawSigWind = ((dcp / 1.75) * 30) * ci_factor;
 
   // Strict constraint: Significant Risk CANNOT exceed General Base Risk
   const sigTor = clamp(Math.min(pTor, dampenSig(rawSigTor)), 0, 60);
@@ -743,8 +743,8 @@ function calculate() {
   const sigWind = clamp(Math.min(pWind, dampenSig(rawSigWind)), 0, 60);
 
   // Hazard Intensities
-  const gustMax = Math.round(clamp(env.meanWind + Math.sqrt(2*Math.max(env.dcape,0))*1.0, 35, 120));
-  const hailMax = clamp(0.75 + (0.75 * ship) + (0.0001 * env.cape), 0.5, 4.5);
+  const gustMax = Math.round(clamp(env.meanWind + Math.sqrt(2*Math.max(env.dcape,0))*1.0, 30, 130));
+  const hailMax = clamp(0.75 + (0.75 * ship) + (0.0001 * env.cape), 0.25, 5.0);
   
   const int = {
     wind: { max: gustMax, tier: windTier(gustMax) },
@@ -754,16 +754,16 @@ function calculate() {
   };
 
   const modesList = [
-    { name: "Discrete Supercell", score: (scp > 2 ? 40 : scp*15) + (env.shear >= 35 ? 30 : env.shear) + (env.cin < -40 ? -20 : 15) },
-    { name: "Pulse Storm", score: (env.cape > 1200 ? 35 : 10) + (env.shear < 20 ? 40 : 0) + (env.dcape > 600 ? 15 : 0) },
-    { name: "Nonlinear MCS", score: (env.cape > 1000 ? 25 : 10) + (env.shear >= 20 && env.shear <= 35 ? 35 : 10) + (env.dcape > 700 ? 20 : 0) },
-    { name: "QLCS / Progressive", score: (env.shear > 35 ? 30 : 10) + (env.meanWind > 35 ? 35 : 10) + (env.dcape > 900 ? 25 : 0) },
-    { name: "QLCS / Frontal", score: (env.shear > 40 ? 35 : 10) + (env.llShear > 25 ? 30 : 5) + (env.srh > 200 ? 20 : 5) },
-    { name: "Embedded Supercell", score: (scp > 1.5 ? 25 : 5) + (env.shear > 35 ? 25 : 10) + (env.cin < -30 ? 20 : 5) + (env.dew > 65 ? 15 : 0) },
-    { name: "Hybrid / Multicell Cluster", score: (env.cape > 800 ? 20 : 5) + (env.shear >= 25 && env.shear <= 40 ? 30 : 10) + 20 },
-    { name: "Low-Topped Supercell", score: (env.t500 < -12 ? 30 : 0) + (env.lcl < 900 ? 25 : 5) + (env.shear > 35 ? 25 : 5) + (env.cape < 1500 && env.cape > 400 ? 20 : 0) },
-    { name: "Derecho / High-Wind MCS", score: (env.dcape > 1100 ? 40 : 0) + (env.meanWind > 45 ? 30 : 0) + (env.lapse > 7.2 ? 20 : 0) },
-    { name: "Elevated / Nocturnal Convection", score: (env.time < 7 || env.time > 21 ? 40 : 0) + (env.cin < -30 ? 30 : 0) + (env.cape > 1000 ? 20 : 0) }
+    { name: "DISCRETE SUPERCELL", score: (scp > 4 ? 40 : scp*15) + (env.shear >= 35 ? 30 : env.shear) + (env.cin < -25 ? -20 : 15) },
+    { name: "PULSE CELLS", score: (env.cape > 1600 ? 35 : 10) + (env.shear < 16 ? 40 : 0) + (env.dcape > 500 ? 15 : 0) },
+    { name: "PULSE MCS", score: (env.cape > 1300 ? 25 : 10) + (env.shear >= 16 && env.shear <= 32 ? 35 : 10) + (env.dcape > 600 ? 20 : 0) },
+    { name: "QLCS / PROGRESSIVE", score: (env.shear > 30 ? 30 : 10) + (env.meanWind > 30 ? 35 : 10) + (env.dcape > 750 ? 25 : 0) },
+    { name: "QLCS / FRONTAL", score: (env.shear > 40 ? 35 : 10) + (env.llShear > 20 ? 30 : 5) + (env.srh > 175 ? 20 : 5) },
+    { name: "SUPERCELLULAR MCS", score: (scp > 1.5 ? 25 : 5) + (env.shear > 35 ? 25 : 10) + (env.cin < -30 ? 20 : 5) + (env.dew > 65 ? 15 : 0) },
+    { name: "HYBRID CLUSTER", score: (env.cape > 1000 ? 20 : 5) + (env.shear >= 25 && env.shear <= 40 ? 30 : 10) + 20 },
+    { name: "LOW TOPPED SUPERCELL", score: (env.t500 < -12 ? 30 : 0) + (env.lcl < 850 ? 25 : 5) + (env.shear > 40 ? 25 : 5) + (env.cape < 1600 && env.cape > 300 ? 20 : 0) },
+    { name: "DERECHO STYLE EVENT", score: (env.dcape > 1000 ? 40 : 0) + (env.meanWind > 45 ? 30 : 0) + (env.lapse > 6.5 ? 20 : 0) },
+    { name: "WEAK NOCTURNAL CONVECTION", score: (env.time < 6 || env.time > 21 ? 40 : 0) + (env.cin < -20 ? 30 : 0) + (env.cape > 1300 ? 20 : 0) }
   ];
 
   let sumScores = modesList.reduce((a, b) => a + Math.max(0, b.score), 0) || 1;
@@ -779,8 +779,8 @@ function calculate() {
   const cat = calcSpcCat(spcT, spcH, spcW);
 
   const getSigLevel = (sigProb) => {
-    if (sigProb >= 30) return "Extreme"; if (sigProb >= 10) return "Hatched";
-    if (sigProb >= 5) return "Possible"; return "None";
+    if (sigProb >= 32) return "CIG 3"; if (sigProb >= 16) return "CIG 2";
+    if (sigProb >= 8) return "CIG 1"; return "None";
   };
 
   if($("summary")) {
